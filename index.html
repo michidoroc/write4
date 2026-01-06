@@ -1,0 +1,361 @@
+```html
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>거대한 교실: 78인의 실제 목소리</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            font-family: 'Nanum Gothic', sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* 맵 (1120x700) */
+        .game-map {
+            position: relative;
+            width: 1120px;
+            height: 700px;
+            background-color: #f4f4f9;
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            box-shadow: 0 0 80px rgba(0,0,0,0.8);
+            border: 10px solid #444;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        /* 조명 레이어 */
+        .lighting-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 99999;
+            mix-blend-mode: multiply;
+            animation: dayNightCycle 60s infinite linear;
+            opacity: 0.3;
+        }
+        @keyframes dayNightCycle {
+            0%, 30% { background-color: #fff; opacity: 0; }
+            45% { background-color: #ffa500; opacity: 0.3; }
+            60% { background-color: #b22222; opacity: 0.4; }
+            75% { background-color: #00008b; opacity: 0.6; }
+            90% { background-color: #191970; opacity: 0.5; }
+            100% { background-color: #fff; opacity: 0; }
+        }
+
+        /* 고양이 */
+        .cat {
+            position: absolute; font-size: 40px; cursor: pointer;
+            transition: top 4s linear, left 4s linear, transform 0.5s;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.3)); user-select: none;
+        }
+        .cat:hover { transform: scale(1.2); }
+        .cat-bubble {
+            visibility: hidden; opacity: 0; position: absolute; bottom: 45px; left: 50%;
+            transform: translateX(-50%); background: #fff; padding: 4px 10px;
+            border-radius: 12px; border: 1px solid #333; font-size: 11px; font-weight: bold;
+            white-space: nowrap; pointer-events: none; transition: opacity 0.2s;
+            z-index: 100000;
+        }
+        .cat:active .cat-bubble { visibility: visible; opacity: 1; }
+
+        /* UI 레이어 */
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100000; }
+        
+        /* ⭐️ 제목 박스 수정 (작고 깔끔하게 한 줄로) ⭐️ */
+        .title-box {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            background: rgba(34, 34, 34, 0.85); /* 투명도 살짝 높임 */
+            color: #fff; 
+            padding: 7px 18px; /* 패딩 최적화 */
+            border-radius: 20px; border: 1px solid #fff; pointer-events: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            display: flex; align-items: center; justify-content: center;
+            white-space: nowrap; /* ⭐️ 줄바꿈 방지 ⭐️ */
+        }
+        .title-box h1 {
+            margin: 0; font-size: 14px; /* 폰트 크기 적절히 조정 */
+            font-weight: normal; letter-spacing: 0.5px;
+        }
+
+        .clock-box {
+            position: absolute; top: 15px; left: 15px; background: rgba(255,255,255,0.8);
+            padding: 4px 10px; border-radius: 15px; font-weight: bold; font-size: 11px;
+            border: 1px solid #333; pointer-events: auto;
+        }
+        .music-btn {
+            position: absolute; top: 15px; right: 15px; width: 30px; height: 30px;
+            background: rgba(0,0,0,0.6); color: #fff; border-radius: 50%; border: 1px solid #fff;
+            text-align: center; line-height: 28px; font-size: 14px;
+            cursor: pointer; pointer-events: auto; transition: transform 0.2s;
+        }
+        .music-btn:hover { transform: scale(1.1); background: #333; }
+
+        /* NPC */
+        .npc {
+            position: absolute; display: flex; flex-direction: column; align-items: center;
+            cursor: pointer; transition: transform 0.2s; width: 50px;
+        }
+        .npc:hover, .npc.speaking { 
+            transform: scale(1.3); 
+            z-index: 99998 !important; 
+        }
+        
+        .avatar {
+            font-size: 28px; width: 44px; height: 44px; line-height: 44px; text-align: center;
+            background: #eee; border-radius: 50%; box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            border: 2px solid #fff; transition: all 0.3s;
+        }
+        .npc.speaking .avatar {
+            border-color: #FFEA00; box-shadow: 0 0 25px rgba(255, 234, 0, 0.9);
+            animation: bounce 0.5s infinite alternate;
+        }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+
+        .name-tag {
+            margin-top: -10px; background: #222; color: #fff; padding: 2px 6px;
+            border-radius: 8px; font-size: 10px; font-weight: bold; white-space: nowrap;
+            border: 1px solid #fff; max-width: 90px; overflow: hidden; text-overflow: ellipsis;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5); opacity: 0.9;
+        }
+
+        /* 말풍선 */
+        .bubble {
+            visibility: hidden; opacity: 0; position: absolute; bottom: 60px; left: 50%;
+            transform: translateX(-50%) scale(0.9); 
+            width: 280px; 
+            max-height: 250px; overflow-y: auto;
+            background: #fff; padding: 12px; border-radius: 12px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6); border: 2px solid #333;
+            font-size: 12px; line-height: 1.5; color: #111; font-weight: 500;
+            transition: all 0.2s; pointer-events: none; word-break: keep-all; 
+            z-index: 99999;
+        }
+        .bubble::-webkit-scrollbar { width: 4px; }
+        .bubble::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        .bubble::after {
+            content: ''; position: absolute; bottom: -12px; left: 50%; margin-left: -10px;
+            border-width: 12px 10px 0; border-style: solid; border-color: #333 transparent transparent;
+        }
+        .npc:hover .bubble, .npc.speaking .bubble {
+            visibility: visible; opacity: 1; bottom: 70px; transform: translateX(-50%) scale(1);
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-map" id="map">
+    <div class="lighting-layer"></div>
+    <div class="ui-layer">
+        <div class="title-box"><h1>🏫 78인의 아우성</h1></div>
+        <div class="clock-box">🕒 <span id="clock-text">낮 12:00</span></div>
+        <div class="music-btn" id="music-toggle">🔇</div>
+    </div>
+    <div id="cat" class="cat" style="top:50%; left:50%; z-index: 500;">🐈<div class="cat-bubble">야옹!</div></div>
+    
+    <audio id="bgm" loop src="https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3"></audio>
+    <audio id="sfx" src="https://cdn.pixabay.com/audio/2022/03/24/audio_c8c8a73467.mp3"></audio>
+    <audio id="meow" src="https://cdn.pixabay.com/audio/2021/08/04/audio_33226a27fa.mp3"></audio>
+</div>
+
+<script>
+    // [실제 데이터 78명]
+    const facultyData = [
+        {name: "이원지", school: "서울과기대", text: "과제 평가를 하는 시기가 될 때마다 학생들과의 '진실게임'이 시작됩니다... 글쓰기 능력을 의탁하는 것에 더해 사고 능력을 의탁하는 것에도 두려움이 없어진 것 같습니다."},
+        {name: "김민수", school: "서울과기대", text: "학생들의 AI 의존도가 나날이 높아지고... 팀별 과제에서 대화 없이 텍스트로만 소통하는 걸 보고 머리를 크게 얻어 맞은 느낌이 들었습니다."},
+        {name: "최형섭", school: "서울과기대", text: "통상적인 보고서로 평가하는 시대는 이미 끝났습니다. 평가 방법에 대한 아이디어가 절실합니다."},
+        {name: "김정환", school: "한림대", text: "기존 방식대로 하면 읽지도 쓰지도 않는 사태가 벌어집니다... 솔직히 이 변화의 속도와 방향에 불만이 있습니다."},
+        {name: "오영진", school: "서울과기대", text: "학생들 글 말미에 '결론적으로'라는 문장을 공통적으로 자주 씁니다. 기계사용의 흔적입니다. 전반적으로 상향된 저품질이라는 아이러니를 목도합니다."},
+        {name: "구자연", school: "서울대", text: "소설책을 읽지 않고 서평을 제출한 것으로 보이는 경우가 있었습니다."},
+        {name: "김지혜", school: "서울과기대", text: "발표과제를 AI로 만드니 정작 발표 내용을 질문했을 때 전혀 답변하지 못하는 경우가 너무 많았습니다."},
+        {name: "이성근", school: "서울과기대", text: "AI로 답을 만들 시간을 달라고 하면서, 그 과정을 당연한 준비 시간으로 요청한 상황이 있었습니다."},
+        {name: "정유미", school: "한국외대", text: "고전을 스스로 읽고 이해하려는 노력의 흔적을 발견하기 힘듭니다... 매끈하지만 개성이 없는 '생각'들 속에서 회의감이 가득합니다."},
+        {name: "양재이", school: "프리랜서", text: "보고서 작성 시 AI 표절 문제가 심각합니다."},
+        {name: "권혜린", school: "한경국립대", text: "실시간 과제가 아니면 스스로 썼다고 확신하기 어렵고 채점 과정이 점점 더 고통스러워집니다."},
+        {name: "최서율", school: "고려대", text: "AI가 생성한 문장의 공허함... 과연 '의미 있는 리포트 쓰기'란 무엇인가 고민하게 됩니다."},
+        {name: "이유경", school: "서울대", text: "GPT킬러 표절 100%가 나왔지만 프로그램이 불안정하다는 이유로 학생에게 말도 못했을 때 회의감을 느꼈습니다."},
+        {name: "안혜지", school: "성균관대", text: "어느새 내가 모르는 수준까지 AI가 발전했을지 모른다는 불안감에 수업 진행에 심력이 많이 소모됩니다."},
+        {name: "김지언", school: "연세대", text: "AI 작성 여부를 명확히 판단할 툴이 없어 고민입니다."},
+        {name: "김지연", school: "한국영상대", text: "이젠 이 도구를 '잘' 이용하는 법을 가르쳐야겠다고 마음먹었지만, 그 '잘'이 뭔지 아직 모르겠습니다."},
+        {name: "정미선", school: "전남대", text: "AI가 쓴 해상도 낮은 글이 '잘 쓴 글'의 기준(Canon)이 되어가는 것 같아요."},
+        {name: "신지영", school: "연세대", text: "..."},
+        {name: "정지혜", school: "조선대", text: "오류를 지적했더니 '그건 AI 잘못이지 내 잘못이 아니다'라며 화를 내더군요."},
+        {name: "이서영", school: "서울과기대", text: "독감 과제에서 문장들이 너무나 '챗GPT'스럽더군요. 과제의 의미조차 잊어버린 게 아닐까 싶습니다."},
+        {name: "김선아", school: "프리랜서", text: "과제뿐만 아니라 생활 곳곳에서도 AI의 영향이 느껴집니다."},
+        {name: "김호동", school: "광복회", text: "생성형 인공지능을 학습동기 유발 수단으로 활용하고 있습니다."},
+        {name: "이은숙", school: "프리랜서", text: "점점 AI가 쓴 문장을 읽기조차 귀찮아져서 저도 그냥 사용할 때가 많습니다."},
+        {name: "조수미", school: "명지대", text: "글쓰기 과제가 궤멸된 느낌입니다... 결국 기술만 가르치는 건 아닌지 회의가 듭니다."},
+        {name: "박민", school: "영일고", text: "학생들은 글을 '쓰려고' 하지 않고 '시키려고'만 합니다. 검토도 안 해요. 윤리보다 기술이 앞선 현실이 우려됩니다."},
+        {name: "최지영", school: "서울과기대", text: "......."},
+        {name: "서영화", school: "한신대", text: "학생들이 LLM에 기대지 않고 스스로 사유하도록 이끌 방법이 있을까요?"},
+        {name: "강연미", school: "강사", text: "논리적인 생각보다 챗GPT부터 먼저 찾는 학생들을 매주 만납니다."},
+        {name: "현지원", school: "DAE", text: "논리적 사고의 흐름이 자꾸 짧아짐을 느낍니다."},
+        {name: "전세진", school: "서울과기대", text: "완성도는 높지만 인간성이 제거된 문장을 어떻게 평가해야 할지... 많은 어려움을 느꼈던 학기였습니다."},
+        {name: "전정옥", school: "상명대", text: "이야기를 듣고 싶습니다."},
+        {name: "이지창", school: "방송작가협회", text: "대놓고 AI로 글을 써 왔다고 하더라고요. 그 후로 급격히 수업 태도도 좋지 않아졌고요."},
+        {name: "한승욱", school: "긴키대학", text: "저는 기말 테스트에 LLM 사용을 허용합니다."},
+        {name: "윤준식", school: "서울대", text: "발표에서 많이 느낍니다. 인공지능 요약과 대본 생성으로 인간의 수동적 읽기가 대체되는 사례들..."},
+        {name: "이춘산", school: "오산중", text: "AI 때문에 학생들이 '깊이 있는' 사고를 하지 않는 경우가 너무 많았습니다."},
+        {name: "조대현", school: "모스크바사범대", text: "학생들이 과제를 AI로 해와 수업을 망치고 있다는 느낌을 받았습니다."},
+        {name: "여소연", school: "가톨릭대", text: "서로 대화하지 않고 각자 AI로 답을 내고 해치워버리듯 과제를 진행하는 것이 충격적이었습니다."},
+        {name: "조익상", school: "서원대", text: "이제는 비문을 발견하면 반가울 지경입니다... 성장의 기반이 되는 실패, 암묵적 신뢰 관계를 되찾고 싶습니다."},
+        {name: "김성애", school: "서울대", text: "아직은 없습니다."},
+        {name: "정용성", school: "홍익대", text: "저는 비교적 AI 사용을 장려하는 편입니다. 생각의 폭이 다양해진다는 장점을 활용할 필요가 있습니다."},
+        {name: "구교선", school: "전북대", text: "자기 발표 내용이 숙지가 되어 있지 않다고 느끼는 경우가 늘어났습니다."},
+        {name: "김미정", school: "경상국립대", text: "토론 수업에서 AI 의견을 그대로 읽는 경우가 늘어 지침을 고민 중입니다."},
+        {name: "김현숙", school: "경북대", text: "없습니다."},
+        {name: "채원", school: "서울대", text: "."},
+        {name: "김영빈", school: "부경대", text: "과제물 솜씨가 좋아졌는데, 정말 학생 실력인지 확신할 수 없어 평가에 곤란함을 겪었습니다."},
+        {name: "전희준", school: "아신대", text: "아무리 봐도 AI 답 같은데 본인이 썼다고 주장할 때 확인이 어렵습니다."},
+        {name: "강부원", school: "성균관대", text: "학생들 과제물이 거의 전부 AI 글쓰기 결과물로 보입니다."},
+        {name: "조혜진", school: "고려대", text: "발표 시간과 전개 방식이 천편일률적이라고 느꼈습니다."},
+        {name: "김소연", school: "국민대", text: "아직 없음 (휴직 중)"},
+        {name: "이은미", school: "GMU Korea", text: "제 생각이 없으면 AI도 무용지물이라는 것을 깨닫게 만드는 과제를 만드는 것이 쉽지 않습니다."},
+        {name: "장미희", school: "북이십일", text: "사회에 진출할 때 전반적으로 하향평준화되어 있지 않을까 우려가 되기도 합니다."},
+        {name: "이성원", school: "한남대", text: "발표자료를 검색 정보들로만 채웁니다."},
+        {name: "박영태", school: "동양미래대", text: "촉각성, 물질성이 부재한 교육과 학습이 지속될 경우, 향후 어떤 결과를 초래할지 걱정입니다."},
+        {name: "이경환", school: "N/A", text: "평가의 곤란함."},
+        {name: "오요한", school: "예일대", text: "존재하지 않는 인용구를 썼는데도 AI 사용을 증명하기 불가능해 감점을 얼마나 줘야 할지 혼란스럽습니다."},
+        {name: "김현진", school: "한국교원대", text: "문제의식 없이 손가락 근육만 키워줍니다."},
+        {name: "박금산", school: "서울과기대", text: "고민 중입니다."},
+        {name: "김태용", school: "숭실대", text: "AI와 예술창작을 연결하려는 저와 달리, 이에 거부감을 갖는 학생들과의 거리를 좁히는 게 고민입니다."},
+        {name: "김성신", school: "한양대", text: "AI를 쓰되 프롬프트를 함께 제출하라고 하는데, 이 방식의 한계에 대해 듣고 싶습니다."},
+        {name: "강준모", school: "Univ. Kansas", text: "질적 연구에서 AI가 무비판적으로 사용되는 분위기에서 문제제기를 하면 뒤처진 사람 취급받는 게 버겁습니다."},
+        {name: "노요홍", school: "LSU", text: "학생들의 글에는 진정성이 없고 더 이상 글을 쓴 것처럼 느껴지지 않습니다."},
+        {name: "김윤정", school: "관교중", text: "학습지를 그대로 챗지피티에 넣어 답을 받아서 내더라고요."},
+        {name: "최우석", school: "독립기념관", text: "큰 차이 없는 잘 쓴 감상문들을 보고 있으니 확신할 수 없었습니다."},
+        {name: "현경희", school: "인천교육청", text: "진정성 의심, 그리고 검증 과정으로 인한 시간과 에너지 소비."},
+        {name: "이애본", school: "한신대", text: "교수자의 노력에 따라 다르다고 느낍니다."},
+        {name: "김시아", school: "서울디지털대", text: "Gemini 답변을 그대로 복사해 최저 점수를 준 경험이 있습니다. 현명한 대처가 필요합니다."},
+        {name: "이한빛", school: "연세대", text: "."},
+        {name: "김이선", school: "강원대", text: "어떤 수업은 쓰라 하고 어떤 수업은 말라고 하니 학생들이 혼란스러워합니다."},
+        {name: "임민영", school: "Bethel Univ", text: "날로 갈수록 교묘해지는 상황에서 교수법 자체에 대한 회의감이 밀려옵니다."},
+        {name: "이언호", school: "큐슈대", text: "사고의 단일화 우려와 학생의 청렴성에 대한 신뢰 붕괴."},
+        {name: "이은옥", school: "고교 교사", text: "학생이 기성 작가 뺨치는 글을 써서 의심한 적이 있습니다."},
+        {name: "박정연", school: "성공회대", text: "자기가 무슨 말을 하는지 모르는 경우가 있었습니다."},
+        {name: "손성문", school: "한언출판사", text: "아직은 없습니다."},
+        {name: "팽동국", school: "제주대", text: "부작용을 줄일 힌트를 얻고 싶습니다."},
+        {name: "원명진", school: "을지대", text: "자기소개서 작성 때 다른 학생들과의 유사 문장 발견."},
+        {name: "이수길", school: "한국공학대", text: "대학영어수업에서의 활용이 궁금합니다."},
+        {name: "오영애", school: "수지환경센터", text: "문명의 전환이라는 파도 위에서 나는 어떠한가를 고민합니다."}
+    ];
+
+    const map = document.getElementById('map');
+    const W = 1120;
+    const H = 700;
+    
+    // 이모지 및 색상 배열
+    const emojis = ["👨‍🏫", "👩‍🏫", "🧑‍🏫", "🎓", "👓", "📚", "🤔", "🖋️", "🏫", "🔬", "💼", "📝"];
+    const colors = ["#FFCDD2", "#F8BBD0", "#E1BEE7", "#D1C4E9", "#C5CAE9", "#BBDEFB", "#B3E5FC", "#B2EBF2", "#B2DFDB", "#C8E6C9", "#DCEDC8", "#F0F4C3", "#FFF9C4", "#FFECB3", "#FFE0B2", "#FFCCBC"];
+
+    // NPC 생성 및 배치
+    facultyData.forEach((data, i) => {
+        const npc = document.createElement('div');
+        npc.className = 'npc';
+        
+        // 상단 UI 영역(80px) 제외하고 랜덤 배치
+        const x = Math.random() * (W - 80) + 40;
+        const y = Math.random() * (H - 120) + 80;
+        
+        npc.style.left = x + 'px';
+        npc.style.top = y + 'px';
+        
+        // Depth Sorting
+        npc.style.zIndex = Math.floor(y);
+
+        const em = emojis[i % emojis.length];
+        const col = colors[i % colors.length];
+
+        npc.innerHTML = `
+            <div class="bubble">"${data.text}"</div>
+            <div class="avatar" style="background:${col};">${em}</div>
+            <div class="name-tag">${data.name}</div>
+        `;
+        map.appendChild(npc);
+    });
+
+    // 오디오
+    const bgm = document.getElementById('bgm');
+    const sfx = document.getElementById('sfx');
+    const meow = document.getElementById('meow');
+    const musicBtn = document.getElementById('music-toggle');
+    
+    let isMusicPlaying = false;
+    bgm.volume = 0.2; sfx.volume = 0.5; meow.volume = 0.6;
+    
+    musicBtn.addEventListener('click', () => {
+        if(isMusicPlaying) { bgm.pause(); musicBtn.textContent='🔇'; }
+        else { bgm.play().catch(()=>{}); musicBtn.textContent='🔊'; }
+        isMusicPlaying = !isMusicPlaying;
+    });
+
+    // 자동 발화
+    const npcs = document.querySelectorAll('.npc');
+    let current = null;
+    
+    function autoSpeak() {
+        if(current) current.classList.remove('speaking');
+        
+        const idx = Math.floor(Math.random() * npcs.length);
+        const target = npcs[idx];
+        current = target;
+        
+        setTimeout(() => {
+            if(current === target) {
+                target.classList.add('speaking');
+                sfx.currentTime=0; sfx.play().catch(()=>{});
+            }
+        }, 100);
+        
+        setTimeout(() => {
+            if(current === target) target.classList.remove('speaking');
+            setTimeout(autoSpeak, 800); 
+        }, 3000); // 3초 유지
+    }
+    setTimeout(autoSpeak, 1000);
+
+    // 고양이 산책
+    const cat = document.getElementById('cat');
+    cat.addEventListener('click', () => { meow.currentTime=0; meow.play().catch(()=>{}); });
+    
+    function moveCat() {
+        const cx = Math.random() * (W - 80) + 40;
+        const cy = Math.random() * (H - 120) + 80;
+        const curX = parseFloat(cat.style.left) || W/2;
+        
+        cat.style.transform = (cx > curX) ? "scaleX(-1)" : "scaleX(1)";
+        cat.style.zIndex = Math.floor(cy);
+
+        const dur = Math.random() * 3000 + 4000;
+        cat.style.transition = `top ${dur}ms linear, left ${dur}ms linear, transform 0.5s`;
+        cat.style.left = cx + 'px';
+        cat.style.top = cy + 'px';
+        
+        setTimeout(moveCat, dur + 2000);
+    }
+    setTimeout(moveCat, 500);
+
+    // 시계
+    const clockText = document.getElementById('clock-text');
+    let t = 0;
+    setInterval(() => {
+        t = (t+1)%60;
+        let str = "";
+        if(t<15) str="☀️ 낮 12:00";
+        else if(t<30) str="🌅 오후 6:00";
+        else if(t<45) str="🌙 밤 11:00";
+        else str="🌅 아침 7:00";
+        clockText.innerText = str;
+    }, 1000);
+</script>
+
+</body>
+</html>
+
+```
